@@ -13,8 +13,9 @@ $form.Size = New-Object System.Drawing.Size(500, 400)
 $form.StartPosition = "CenterScreen"
 
 # ドロップエリアをラベルとして作成
+$dropLabelInit = "ここにファイルをドラッグ＆ドロップしてください"
 $dropLabel = New-Object System.Windows.Forms.Label
-$dropLabel.Text = "ここにファイルをドラッグ＆ドロップしてください"
+$dropLabel.Text = $dropLabelInit
 $dropLabel.AutoSize = $false
 $dropLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 $dropLabel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
@@ -51,10 +52,10 @@ $dropLabel.Add_DragDrop({
     $dropLabel.Text = "ファイルが追加されました。"
 })
 
-# 実行ボタン
+# (1) 実行ボタン
 $executeButton = New-Object System.Windows.Forms.Button
 $executeButton.Text = "実行"
-$executeButton.Location = New-Object System.Drawing.Point(200, 330)
+$executeButton.Location = New-Object System.Drawing.Point(100, 330)
 $executeButton.Size = New-Object System.Drawing.Size(100, 30)
 $executeButton.Add_Click({
     if ($fileListBox.Items.Count -eq 0) {
@@ -65,16 +66,45 @@ $executeButton.Add_Click({
         [System.Windows.Forms.MessageBox]::Show("EncryptDecrypt.ps1 が見つかりません。", "エラー")
         return
     }
-    # ファイルリストを引数として渡す
-    $fileArguments = @($fileListBox.Items) -join " "
+
+    # ファイルパスをダブルクォートで囲んで引数化
+    $quotedFiles = $fileListBox.Items | ForEach-Object { '"{0}"' -f $_ }
+    $fileArguments = $quotedFiles -join ' '
+
     try {
-        Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$encryptDecryptScript`" $fileArguments" -Wait
-        [System.Windows.Forms.MessageBox]::Show("処理が完了しました！", "成功")
-    } catch {
-        [System.Windows.Forms.MessageBox]::Show("処理中にエラーが発生しました: $_", "エラー")
+        # -PassThru と -Wait を指定し、プロセス情報を受け取る
+        $p = Start-Process -FilePath "powershell.exe" `
+            -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$encryptDecryptScript`" $fileArguments" `
+            -Wait -PassThru
+
+        # プロセス終了後に ExitCode を確認
+        if ($p.ExitCode -ne 0) {
+            [System.Windows.Forms.MessageBox]::Show("暗号/復号スクリプトがエラー終了しました。(ExitCode: $($p.ExitCode))", "エラー")
+        }
+        else {
+            # 処理成功時はリストをクリアする
+            $fileListBox.Items.Clear()
+            $dropLabel.Text = $dropLabelInit
+            # [System.Windows.Forms.MessageBox]::Show("処理が完了しました！", "成功")
+        }
+
+    }
+    catch {
+        [System.Windows.Forms.MessageBox]::Show("処理中にエラーが発生しました: $_", "例外")
     }
 })
 $form.Controls.Add($executeButton)
+
+# (2) リストをクリアするボタン
+$clearButton = New-Object System.Windows.Forms.Button
+$clearButton.Text = "リストクリア"
+$clearButton.Location = New-Object System.Drawing.Point(300, 330)
+$clearButton.Size = New-Object System.Drawing.Size(100, 30)
+$clearButton.Add_Click({
+    $fileListBox.Items.Clear()
+    $dropLabel.Text = $dropLabelInit
+})
+$form.Controls.Add($clearButton)
 
 # フォームを表示
 $form.ShowDialog()
