@@ -2,7 +2,7 @@
 
 ## **1\. 概要**
 
-本マニュアルでは、PowerShellスクリプトを用いて
+PowerShellスクリプトを用いて
 
 1. **RSA鍵ペアの生成**  
 2. **ハイブリッド暗号（AES \+ RSA公開鍵）を使ったファイル暗号化**  
@@ -13,12 +13,9 @@
 
 **ファイル一覧**
 
-* ### **GenerateRSAKeyPair.ps1**   RSA鍵ペアの生成
-
+  * ### **GenerateRSAKeyPair.ps1**   RSA鍵ペアの生成
   * ### **EncryptDecrypt.ps1**     暗号化/復号化
-
   * ### **FormEncryptDecrypt.ps1**     EncryptDecrypt.ps1をフォームにしたもの
-
 * 
 
 ---
@@ -48,11 +45,8 @@ PowerShellを開き、本スクリプトがあるディレクトリへ移動
 ### **3.1 スクリプト名: EncryptDecrypt.ps1**
 
 「公開鍵でAES鍵を暗号化し、AES(CBC)でファイル本体を暗号化する」いわゆるハイブリッド暗号です。
-
 AES鍵は256bitのものをその場で生成しています。IVも生成しており、暗号化したファイルに格納しています。
-
 暗号化をざっくり描いたのが下図となります。
-
 さらに、暗号化前に「元ファイル名長＋元ファイル名」をAES暗号ストリームに書き込み、**復号時に元ファイル名**を再現できるようにしています。
 
 #### **3.1.1 実行手順**
@@ -146,12 +140,11 @@ AES鍵は256bitのものをその場で生成しています。IVも生成して
 
 ## **8\. 参考リンク**
 
-* [Microsoft Docs: RSACryptoServiceProvider Class (System.Security.Cryptography)](https://learn.microsoft.com/ja-jp/dotnet/api/system.security.cryptography.rsacryptoserviceprovider)  
-* [Microsoft Docs: Aes Class (System.Security.Cryptography)](https://learn.microsoft.com/ja-jp/dotnet/api/system.security.cryptography.aes)  
-* PowerShellを管理者権限に昇格して実行[https://qiita.com/sakekasunuts/items/63a4023887348722b416](https://qiita.com/sakekasunuts/items/63a4023887348722b416)  
-* PowerShellをダブルクリックやドラッグアンドドロップで実行したい。  
-  https://qiita.com/devfox/items/dc4371cbf2f215f1801d
-
-## **9\. ダウンロード**
-
-[https://drive.google.com/file/d/1OFwHTYy7jDS9JU3E5jtOVxULpRSlleqG/view?usp=sharing](https://drive.google.com/file/d/1OFwHTYy7jDS9JU3E5jtOVxULpRSlleqG/view?usp=sharing)
+* Microsoft Docs: RSACryptoServiceProvider Class (System.Security.Cryptography)
+   [https://learn.microsoft.com/ja-jp/dotnet/api/system.security.cryptography.rsacryptoserviceprovider](https://learn.microsoft.com/ja-jp/dotnet/api/system.security.cryptography.rsacryptoserviceprovider)  
+* Microsoft Docs: Aes Class (System.Security.Cryptography)
+   [https://learn.microsoft.com/ja-jp/dotnet/api/system.security.cryptography.aes](https://learn.microsoft.com/ja-jp/dotnet/api/system.security.cryptography.aes)  
+* PowerShellを管理者権限に昇格して実行
+   [https://qiita.com/sakekasunuts/items/63a4023887348722b416](https://qiita.com/sakekasunuts/items/63a4023887348722b416)  
+* PowerShellをダブルクリックやドラッグアンドドロップで実行したい
+  [https://qiita.com/devfox/items/dc4371cbf2f215f1801d](https://qiita.com/devfox/items/dc4371cbf2f215f1801d)
