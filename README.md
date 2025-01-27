@@ -48,7 +48,7 @@ PowerShellを開き、本スクリプトがあるディレクトリへ移動
 AES鍵は256bitのものをその場で生成しています。IVも生成しており、暗号化したファイルに格納しています。
 暗号化をざっくり描いたのが下図となります。
 
-![Image](https://github.com/user-attachments/assets/f70eb95b-a1bd-40cf-b995-2400c8ac507b)
+![image](https://github.com/user-attachments/assets/b2160d4c-e2bc-4f83-98ca-b0bdf9163428)
 
 さらに、暗号化前に「元ファイル名長＋元ファイル名」をAES暗号ストリームに書き込み、**復号時に元ファイル名**を再現できるようにしています。
 
