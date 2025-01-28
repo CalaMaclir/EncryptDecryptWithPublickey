@@ -13,9 +13,9 @@ PowerShellスクリプトを用いて
 
 **ファイル一覧**
 
-  * ### **GenerateRSAKeyPair.ps1**   RSA鍵ペアの生成
-  * ### **EncryptDecrypt.ps1**     暗号化/復号
-  * ### **FormEncryptDecrypt.ps1**     EncryptDecrypt.ps1をフォームにしたもの
+  * ### **GenerateRSAKeyPair.ps1**   RSA鍵ペアの生成(CUI)
+  * ### **EncryptDecrypt.ps1**     暗号化/復号(CUI)
+  * ### **FormEncryptDecrypt.ps1**     RSA鍵ペア生成、暗号化/復号をフォームにしたもの
 
 ---
 
