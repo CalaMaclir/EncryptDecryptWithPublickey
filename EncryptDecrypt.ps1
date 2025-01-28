@@ -21,7 +21,7 @@ function Get-ModulusFromXmlString {
         [Parameter(Mandatory)]
         [string]$XmlString
     )
-    # XML要素 <Modulus> ～ </Modulus> を簡易的に取り出す (実運用で正規表現やXMLパーサに置き換え可能)
+    # XML要素 <Modulus> ～ </Modulus> を簡易的に取り出す (実運用ではXMLパーサ推奨)
     $modulusBase64 = ($XmlString -split "<Modulus>|</Modulus>")[1].Trim()
     if (-not $modulusBase64) {
         return $null
@@ -36,7 +36,6 @@ function Normalize-Paths {
         [string[]]$InputArgs
     )
 
-    # 引数を Resolve-Path で絶対パスに正規化する
     $resolved = $InputArgs | ForEach-Object {
         (Resolve-Path $_).Path
     }
@@ -66,7 +65,7 @@ function EncryptFile {
     $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
     $rsa.FromXmlString($publicKeyXml)
 
-    # 鍵XMLからModulusを取得 (共通化)
+    # 鍵XMLからModulusを取得
     $modulusBase64 = Get-ModulusFromXmlString -XmlString $publicKeyXml
     if (-not $modulusBase64) {
         Write-Host "エラー: 公開鍵XMLから <Modulus> を取得できませんでした。"
@@ -185,6 +184,22 @@ function GetModulusFromEncryptedFile {
     }
 }
 
+# --- (新規) 暗号ファイル先頭からModulusを取得して返す関数 ---
+function Get-ModulusInfoOrFail {
+    Param(
+        [Parameter(Mandatory)]
+        [string]$EncryptedFilePath
+    )
+
+    # GetModulusFromEncryptedFile を呼び出し、失敗したらエラー表示して即リターン
+    $modulusInfo = GetModulusFromEncryptedFile -InputFilePath $EncryptedFilePath
+    if (-not $modulusInfo) {
+        Write-Host "エラー: Modulus取得に失敗しました。"
+        return $null
+    }
+    return $modulusInfo
+}
+
 # --- 2) 関数定義: DecryptFile ---
 function DecryptFile {
     Param(
@@ -194,11 +209,10 @@ function DecryptFile {
         [string]$InputFilePath
     )
 
-    # 1) 暗号ファイル先頭からModulus取得
-    $modulusInfo = GetModulusFromEncryptedFile -InputFilePath $InputFilePath
+    # 1) 暗号ファイル先頭からModulus取得 (切り出した関数を利用)
+    $modulusInfo = Get-ModulusInfoOrFail -EncryptedFilePath $InputFilePath
     if (-not $modulusInfo) {
-        Write-Host "エラー: Modulus取得に失敗しました。"
-        return
+        return  # 上記でエラー済みなのでここで終了
     }
     $modulusFromFile = $modulusInfo.Modulus
     $currentPosition = $modulusInfo.Position
@@ -208,7 +222,7 @@ function DecryptFile {
     $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
     $rsa.FromXmlString($privateKeyXml)
 
-    # 鍵XMLからModulusを取得 (共通化)
+    # 鍵XMLからModulusを取得
     $modulusFromPriv = Get-ModulusFromXmlString -XmlString $privateKeyXml
     if (-not $modulusFromPriv) {
         Write-Host "エラー: 秘密鍵XMLから <Modulus> が取得できません。"
@@ -244,7 +258,7 @@ function DecryptFile {
         }
         $encAesKeyLen = [BitConverter]::ToInt32($keyLenBuf, 0)
 
-        # (a) AES鍵サイズの妥当性チェック (例として 4096超をエラーとする)
+        # (a) AES鍵サイズの妥当性チェック (例: 0以下 or 4096超は不正)
         if ($encAesKeyLen -le 0 -or $encAesKeyLen -gt 4096) {
             Write-Host "エラー: AES鍵サイズが不正 ($encAesKeyLen)"
             return
@@ -282,7 +296,7 @@ function DecryptFile {
         }
         $fnameLen = [BitConverter]::ToInt32($fnameLenBuf, 0)
 
-        # (b) ファイル名長のチェック (例として512超ならエラー)
+        # (b) ファイル名長のチェック
         if ($fnameLen -le 0 -or $fnameLen -gt 512) {
             Write-Host "エラー: ファイル名長が不正です ($fnameLen)"
             return
@@ -294,17 +308,15 @@ function DecryptFile {
             Write-Host "エラー: 復号データからファイル名を読み取れません"
             return
         }
-
         $originalFileName = [System.Text.Encoding]::UTF8.GetString($fnameBuf)
 
-        # (c) ファイル名の安全対策 (無効文字やパス文字の除去など)
+        # (c) ファイル名の安全対策
         $invalidChars = [System.IO.Path]::GetInvalidFileNameChars()
         foreach ($c in $invalidChars) {
             $originalFileName = $originalFileName -replace [Regex]::Escape($c), '_'
         }
 
-        # ディレクトリトラバーサル(../等)や絶対パスを禁止
-        # フォルダ外への書き込みを防ぐためにフルパスで検証
+        # ディレクトリトラバーサル等を禁止
         $folder = [System.IO.Path]::GetDirectoryName($InputFilePath)
         $outFilePath = Join-Path $folder $originalFileName
 
