@@ -55,7 +55,7 @@ $dropLabel.Add_DragDrop({
 # (1) 実行ボタン
 $executeButton = New-Object System.Windows.Forms.Button
 $executeButton.Text = "実行"
-$executeButton.Location = New-Object System.Drawing.Point(100, 330)
+$executeButton.Location = New-Object System.Drawing.Point(100, 320)
 $executeButton.Size = New-Object System.Drawing.Size(100, 30)
 $executeButton.Add_Click({
     if ($fileListBox.Items.Count -eq 0) {
@@ -98,7 +98,7 @@ $form.Controls.Add($executeButton)
 # (2) リストをクリアするボタン
 $clearButton = New-Object System.Windows.Forms.Button
 $clearButton.Text = "リストクリア"
-$clearButton.Location = New-Object System.Drawing.Point(300, 330)
+$clearButton.Location = New-Object System.Drawing.Point(300, 320)
 $clearButton.Size = New-Object System.Drawing.Size(100, 30)
 $clearButton.Add_Click({
     $fileListBox.Items.Clear()
