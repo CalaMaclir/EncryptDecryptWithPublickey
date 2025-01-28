@@ -160,8 +160,10 @@ function GetModulusFromEncryptedFile {
             return $null
         }
         $modLen = [BitConverter]::ToInt32($modLenBuf, 0)
-        if ($modLen -le 0) {
-            Write-Host "エラー: Modulus長が不正 (0以下)"
+
+        # 1) Modulus長チェック (0以下・1024超は不正)
+        if ($modLen -le 0 -or $modLen -gt 1024) {
+            Write-Host "エラー: Modulus長が不正 ($modLen)"
             return $null
         }
 
@@ -233,7 +235,7 @@ function DecryptFile {
             return
         }
 
-        # 5) AES鍵サイズ(4バイト)
+        # 5) AES鍵サイズ(4バイト)を取得
         $keyLenBuf = New-Object byte[] 4
         $bytesRead = $fsIn.Read($keyLenBuf, 0, 4)
         if ($bytesRead -ne 4) {
@@ -242,7 +244,13 @@ function DecryptFile {
         }
         $encAesKeyLen = [BitConverter]::ToInt32($keyLenBuf, 0)
 
-        # 6) RSA暗号化されたAES鍵
+        # (a) AES鍵サイズの妥当性チェック (例として 4096超をエラーとする)
+        if ($encAesKeyLen -le 0 -or $encAesKeyLen -gt 4096) {
+            Write-Host "エラー: AES鍵サイズが不正 ($encAesKeyLen)"
+            return
+        }
+
+        # 6) RSA暗号化されたAES鍵を読み込む
         $encryptedAesKey = New-Object byte[] $encAesKeyLen
         $bytesRead = $fsIn.Read($encryptedAesKey, 0, $encAesKeyLen)
         if ($bytesRead -ne $encAesKeyLen) {
@@ -274,19 +282,43 @@ function DecryptFile {
         }
         $fnameLen = [BitConverter]::ToInt32($fnameLenBuf, 0)
 
+        # (b) ファイル名長のチェック (例として512超ならエラー)
+        if ($fnameLen -le 0 -or $fnameLen -gt 512) {
+            Write-Host "エラー: ファイル名長が不正です ($fnameLen)"
+            return
+        }
+
         $fnameBuf = New-Object byte[] $fnameLen
         $count = $cryptoStream.Read($fnameBuf, 0, $fnameLen)
         if ($count -lt $fnameLen) {
             Write-Host "エラー: 復号データからファイル名を読み取れません"
             return
         }
+
         $originalFileName = [System.Text.Encoding]::UTF8.GetString($fnameBuf)
+
+        # (c) ファイル名の安全対策 (無効文字やパス文字の除去など)
+        $invalidChars = [System.IO.Path]::GetInvalidFileNameChars()
+        foreach ($c in $invalidChars) {
+            $originalFileName = $originalFileName -replace [Regex]::Escape($c), '_'
+        }
+
+        # ディレクトリトラバーサル(../等)や絶対パスを禁止
+        # フォルダ外への書き込みを防ぐためにフルパスで検証
+        $folder = [System.IO.Path]::GetDirectoryName($InputFilePath)
+        $outFilePath = Join-Path $folder $originalFileName
+
+        $fullOutFilePath = [System.IO.Path]::GetFullPath($outFilePath)
+        $fullFolderPath  = [System.IO.Path]::GetFullPath($folder)
+        if (-not $fullOutFilePath.StartsWith($fullFolderPath)) {
+            Write-Host "エラー: ディレクトリ外への書き込みが試行されました。"
+            return
+        }
+
         Write-Host "元ファイル名: $originalFileName"
 
         # 10) 残りをファイル出力
-        $folder = [System.IO.Path]::GetDirectoryName($InputFilePath)
-        $outFilePath = Join-Path $folder $originalFileName
-        $fsOut = [System.IO.File]::OpenWrite($outFilePath)
+        $fsOut = [System.IO.File]::OpenWrite($fullOutFilePath)
         try {
             $bufSize = 4096
             $buf = New-Object byte[] $bufSize
@@ -300,7 +332,7 @@ function DecryptFile {
             $fsOut.Close()
         }
 
-        Write-Host "復号完了: $outFilePath"
+        Write-Host "復号完了: $fullOutFilePath"
 
         $cryptoStream.Close()
         $cryptoStream.Dispose()
