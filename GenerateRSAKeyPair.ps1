@@ -1,5 +1,5 @@
 Param(
-    [int]$KeySize = 2048
+    [int]$KeySize = 4096
 )
 
 # --- 1) 鍵長のバリデーション ---
@@ -7,19 +7,6 @@ if ($KeySize -ne 2048 -and $KeySize -ne 4096) {
     Write-Host "エラー: 鍵長は 2048 または 4096 のみ指定可能です。"
     Pause
     exit 1
-}
-
-# --- 管理者権限チェック ---
-if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole("Administrators")) {
-    # 再起動時に KeySize パラメータを渡す
-    $argList = @(
-        '-File'
-        "`"$PSCommandPath`""   # スクリプトのフルパスに必ずダブルクォートを付加
-        '-KeySize'
-        $KeySize
-    )
-    Start-Process powershell.exe -ArgumentList $argList -Verb RunAs
-    exit
 }
 
 # --- 2) "yyyyMMddHHmm"形式のタイムスタンプ文字列を生成 ---
